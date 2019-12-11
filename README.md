@@ -41,7 +41,9 @@ Extra (for my launcher) still open source
   - [ ] By color
   - [ ] All apps which are installed in debug mode.
   - [ ] App categories based on this
-- [ ] Apps - [ ] Save given configuration in db
-      (?) denotes it's unclear either whether to implement it or how to implement it (for me).
+- [ ] Apps
+  - [ ] Save given configuration in db
+
+(?) denotes it's unclear either whether to implement it or how to implement it (for me).
 
 Check out my Launcher [play store link]() coming soon.
