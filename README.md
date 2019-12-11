@@ -6,7 +6,7 @@ A flutter plugin that exposes some android APIs to help build home screen replac
 
 **Status:** WIP
 
-Todo:
+## Todo
 
 - [ ] Wallpaper
   - [ ] Get Wallpaper
@@ -46,4 +46,6 @@ Extra (for my launcher) still open source
 
 (?) denotes it's unclear either whether to implement it or how to implement it (for me).
 
-Check out my Launcher [play store link]() coming soon.
+> Move this to top once it's done.
+
+> Check out my Launcher [play store link]() [coming soon].
