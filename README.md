@@ -43,6 +43,7 @@ Extra (for my launcher) still open source
   - [ ] App categories based on this
 - [ ] Apps
   - [ ] Save given configuration in db
+- [ ] App shortcut info
 
 (?) denotes it's unclear either whether to implement it or how to implement it (for me).
 

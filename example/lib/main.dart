@@ -47,7 +47,7 @@ class _MyAppState extends State<MyApp> {
         ),
         body: Container(
           child: Center(
-            child: Text('Running on: $_platformVersion\n'),
+            child: Text('Running on: $_platformVersion'),
           ),
         ),
       ),
