@@ -19,6 +19,8 @@ A flutter plugin that exposes some android APIs to help build home screen replac
   - [ ] Set Wallpaper Offsets
   - [ ] Set Wallpaper Offset Hints (?)
   - [ ] Link to a pageview controller
+  - [ ] Colors
+    - [ ] Get wallpaper colors
 - [ ] Apps
   - [ ] Get a list of apps
   - [ ] Cache appinfos
@@ -28,10 +30,12 @@ A flutter plugin that exposes some android APIs to help build home screen replac
   - [ ] AppCacheProvider
   - [ ] New app installed/uninstalled events
     - [ ] Also provides a flag to check if it's an icon pack
+  - [ ] Launch an App
 - [ ] Icon Packs
   - [ ] Get supported icon packs
   - [ ] For each icon pack provide icon path and label
   - [ ] A method to get the icon (?)
+- [ ] Send events to live wallpaper
 
 ---
 
