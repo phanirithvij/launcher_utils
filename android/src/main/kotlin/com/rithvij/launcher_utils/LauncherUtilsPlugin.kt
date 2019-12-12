@@ -40,6 +40,13 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
             "getPlatformVersion" -> {
                 result.success(Build.DEVICE)
             }
+            "isWallpaperSupported" -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    result.success(wallpaperManager.isWallpaperSupported)
+                } else {
+                    result.error("requiresApi", "Requires Android M", null)
+                }
+            }
             "setWallpaper" -> {
                 if (call.hasArgument("image")) {
                     setWallpaper(call.argument<ByteArray>("image"))

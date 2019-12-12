@@ -7,7 +7,7 @@ void main() {
 
   setUp(() {
     channel.setMockMethodCallHandler((MethodCall methodCall) async {
-      return '42';
+      return true;
     });
   });
 
@@ -15,7 +15,7 @@ void main() {
     channel.setMockMethodCallHandler(null);
   });
 
-  test('getPlatformVersion', () async {
-    expect(await LauncherUtils.platformVersion, '42');
+  test('getWallpaperSupported', () async {
+    expect(await LauncherUtils.isWallpaperSupported, true);
   });
 }

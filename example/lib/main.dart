@@ -1,10 +1,17 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:async';
 
-import 'package:flutter/services.dart';
 import 'package:launcher_utils/launcher_utils.dart';
+import 'package:launcher_utils/exceptions.dart';
+import 'package:permission_handler/permission_handler.dart';
 
-void main() => runApp(MyApp());
+void main() {
+  runApp(MyApp());
+  SystemChrome.setEnabledSystemUIOverlays([]);
+}
 
 class MyApp extends StatefulWidget {
   @override
@@ -12,20 +19,23 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  String _platformVersion = 'Unknown';
+  String _isWallpaperSupported = 'Unknown';
+  dynamic _bytes;
 
   @override
   void initState() {
     super.initState();
     initPlatformState();
+    getWallpaper();
   }
 
   Future<void> initPlatformState() async {
-    String platformVersion;
-    try {
-      platformVersion = await LauncherUtils.platformVersion;
-    } on PlatformException {
-      platformVersion = 'Failed to get platform version.';
+    String isWallpaperSupported;
+    bool supported = await LauncherUtils.isWallpaperSupported;
+    if (supported == null) {
+      isWallpaperSupported = 'Unknown';
+    } else {
+      isWallpaperSupported = supported ? "Supported" : "Not Supported";
     }
 
     // If the widget was removed from the tree while the asynchronous platform
@@ -34,7 +44,25 @@ class _MyAppState extends State<MyApp> {
     if (!mounted) return;
 
     setState(() {
-      _platformVersion = platformVersion;
+      _isWallpaperSupported = isWallpaperSupported;
+    });
+  }
+
+  Future<void> getWallpaper() async {
+    Uint8List bytes;
+    try {
+      bytes = await LauncherUtils.getWallpaper();
+      print(bytes.runtimeType);
+    } on PermissionDeniedException catch (e) {
+      // open settings or show snackbar
+      print(e);
+    } on Exception catch (e) {
+      print(e);
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _bytes = bytes;
     });
   }
 
@@ -42,13 +70,26 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Plugin example app'),
-        ),
         body: Container(
-          child: Center(
-            child: Text('Running on: $_platformVersion'),
+          child: Column(
+            children: <Widget>[
+              Container(
+                child: Center(
+                  child: Text('Is Wallpaper Supported: $_isWallpaperSupported'),
+                ),
+              ),
+              (_bytes != null)
+                  ? Image.memory(_bytes)
+                  : CircularProgressIndicator(),
+            ],
           ),
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () async {
+            bool isOpened = await PermissionHandler().openAppSettings();
+            print(isOpened);
+          },
+          child: Icon(Icons.settings),
         ),
       ),
     );
