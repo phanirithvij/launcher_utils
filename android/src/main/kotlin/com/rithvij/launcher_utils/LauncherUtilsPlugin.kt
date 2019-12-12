@@ -27,7 +27,8 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
         @JvmStatic
         fun registerWith(registrar: PluginRegistry.Registrar) {
             val channel = MethodChannel(registrar.messenger(), "launcher_utils")
-            channel.setMethodCallHandler(LauncherUtilsPlugin(registrar))
+            val plugin = LauncherUtilsPlugin(registrar)
+            channel.setMethodCallHandler(plugin)
         }
     }
 
