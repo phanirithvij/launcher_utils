@@ -9,8 +9,8 @@ A flutter plugin that exposes some android APIs to help build home screen replac
 ## Todo
 
 - [ ] Wallpaper
-  - [ ] Get Wallpaper
-    - [ ] As an image
+  - [x] Get Wallpaper
+    - [x] As an image
     - [ ] WallpaperInfo (for live wallpapers)
   - [ ] Set Wallpaper
     - [ ] Through Image
