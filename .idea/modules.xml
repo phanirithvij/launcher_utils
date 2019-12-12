@@ -2,9 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/home_launcher.iml" filepath="$PROJECT_DIR$/home_launcher.iml" />
-      <module fileurl="file://$PROJECT_DIR$/android/home_launcher_android.iml" filepath="$PROJECT_DIR$/android/home_launcher_android.iml" />
-      <module fileurl="file://$PROJECT_DIR$/example/android/home_launcher_example_android.iml" filepath="$PROJECT_DIR$/example/android/home_launcher_example_android.iml" />
+      <module fileurl="file://$PROJECT_DIR$/launcher_utils.iml" filepath="$PROJECT_DIR$/launcher_utils.iml" />
+      <module fileurl="file://$PROJECT_DIR$/android/launcher_utils_android.iml" filepath="$PROJECT_DIR$/android/launcher_utils_android.iml" />
+      <module fileurl="file://$PROJECT_DIR$/example/android/launcher_utils_example_android.iml" filepath="$PROJECT_DIR$/example/android/launcher_utils_example_android.iml" />
     </modules>
   </component>
 </project>

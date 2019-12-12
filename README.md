@@ -1,4 +1,4 @@
-# home_launcher
+# launcher_utils
 
 A flutter plugin that exposes some android APIs to help build home screen replacement apps.
 

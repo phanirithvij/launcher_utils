@@ -1,9 +1,9 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:home_launcher/home_launcher.dart';
+import 'package:launcher_utils/launcher_utils.dart';
 
 void main() {
-  const MethodChannel channel = MethodChannel('home_launcher');
+  const MethodChannel channel = MethodChannel('launcher_utils');
 
   setUp(() {
     channel.setMockMethodCallHandler((MethodCall methodCall) async {
@@ -16,6 +16,6 @@ void main() {
   });
 
   test('getPlatformVersion', () async {
-    expect(await HomeLauncher.platformVersion, '42');
+    expect(await LauncherUtils.platformVersion, '42');
   });
 }

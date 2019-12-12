@@ -2,9 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 
-class HomeLauncher {
-  static const MethodChannel _channel =
-      const MethodChannel('home_launcher');
+class LauncherUtils {
+  static const MethodChannel _channel = const MethodChannel('launcher_utils');
 
   static Future<String> get platformVersion async {
     final String version = await _channel.invokeMethod('getPlatformVersion');

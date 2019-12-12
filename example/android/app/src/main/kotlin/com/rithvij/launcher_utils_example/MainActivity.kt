@@ -1,4 +1,4 @@
-package com.rithvij.home_launcher_example
+package com.rithvij.launcher_utils_example
 
 import android.os.Bundle
 

@@ -1,8 +1,8 @@
-name: home_launcher
+name: launcher_utils
 description: A plugin to help users build android home screen replacement apps.
 version: 0.0.1
 author: Phani Rithvij
-homepage: https://github.com/phanirithvij/home_launcher
+homepage: https://github.com/phanirithvij/launcher_utils
 
 environment:
   sdk: ">=2.1.0 <3.0.0"
@@ -17,9 +17,8 @@ dev_dependencies:
 
 flutter:
   plugin:
-    androidPackage: com.rithvij.home_launcher
-    pluginClass: HomeLauncherPlugin
-
+    androidPackage: com.rithvij.launcher_utils
+    pluginClass: LauncherUtilsPlugin
   # assets:
   #  - images/a_dot_burr.jpeg
   #  - images/a_dot_ham.jpeg

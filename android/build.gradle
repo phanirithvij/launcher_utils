@@ -1,4 +1,4 @@
-group 'com.rithvij.home_launcher'
+group 'com.rithvij.launcher_utils'
 version '1.0-SNAPSHOT'
 
 buildscript {

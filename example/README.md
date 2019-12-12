@@ -1,6 +1,6 @@
-# home_launcher_example
+# launcher_utils_example
 
-Demonstrates how to use the home_launcher plugin.
+Demonstrates how to use the launcher_utils plugin.
 
 ## Getting Started
 

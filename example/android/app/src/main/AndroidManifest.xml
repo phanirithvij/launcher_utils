@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="com.rithvij.home_launcher_example">
+    package="com.rithvij.launcher_utils_example">
 
     <!-- io.flutter.app.FlutterApplication is an android.app.Application that
          calls FlutterMain.startInitialization(this); in its onCreate method.
@@ -11,9 +11,9 @@
         android:name="io.flutter.app.FlutterApplication"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
-        android:label="home_launcher_example"
+        android:label="launcher_utils_example"
         tools:ignore="GoogleAppIndexingWarning">
-        <receiver android:name="com.rithvij.home_launcher.EventsReceiver" />
+        <receiver android:name="com.rithvij.launcher_utils.EventsReceiver" />
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"

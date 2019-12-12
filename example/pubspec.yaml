@@ -1,5 +1,5 @@
-name: home_launcher_example
-description: Demonstrates how to use the home_launcher plugin.
+name: launcher_utils_example
+description: Demonstrates how to use the launcher_utils plugin.
 publish_to: 'none'
 
 environment:
@@ -17,7 +17,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
-  home_launcher:
+  launcher_utils:
     path: ../
 
 # For information on the generic Dart part of this file, see the

@@ -1,4 +1,4 @@
-package com.rithvij.home_launcher
+package com.rithvij.launcher_utils
 
 import android.app.PendingIntent
 import android.app.WallpaperManager
@@ -18,7 +18,7 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.PluginRegistry
 import java.io.ByteArrayOutputStream
 
-class HomeLauncherPlugin(private var registrar: PluginRegistry.Registrar) : MethodCallHandler {
+class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : MethodCallHandler {
     private val wallpaperManager: WallpaperManager = WallpaperManager.getInstance(this.registrar.context())
     private val applicationContext = registrar.context()
     private val packageManager = applicationContext.packageManager
@@ -26,8 +26,8 @@ class HomeLauncherPlugin(private var registrar: PluginRegistry.Registrar) : Meth
     companion object {
         @JvmStatic
         fun registerWith(registrar: PluginRegistry.Registrar) {
-            val channel = MethodChannel(registrar.messenger(), "home_launcher")
-            channel.setMethodCallHandler(HomeLauncherPlugin(registrar))
+            val channel = MethodChannel(registrar.messenger(), "launcher_utils")
+            channel.setMethodCallHandler(LauncherUtilsPlugin(registrar))
         }
     }
 
@@ -35,6 +35,9 @@ class HomeLauncherPlugin(private var registrar: PluginRegistry.Registrar) : Meth
         when (call.method) {
             "getWallpaper" -> {
                 getWallpaper(result)
+            }
+            "getPlatformVersion" -> {
+                result.success(Build.DEVICE)
             }
             "setWallpaper" -> {
                 if (call.hasArgument("image")) {
@@ -90,8 +93,8 @@ class HomeLauncherPlugin(private var registrar: PluginRegistry.Registrar) : Meth
         val providers = packageManager.queryIntentActivities(intent, 0)
         val ret = arrayListOf<String>()
         providers.forEach {
-            Log.d("HomeLauncher", it.activityInfo.packageName)
-            Log.d("HomeLauncher", it.activityInfo.targetActivity)
+            Log.d("LauncherUtils", it.activityInfo.packageName)
+            Log.d("LauncherUtils", it.activityInfo.targetActivity)
             ret.add(it.activityInfo.packageName)
         }
         return ret
@@ -152,7 +155,7 @@ class HomeLauncherPlugin(private var registrar: PluginRegistry.Registrar) : Meth
             var hasSettings = false
             // if it has a settings activity
             if (wallpaperManager.wallpaperInfo.settingsActivity != null) {
-                Log.d("HomeLauncherPlugin", wallpaperManager.wallpaperInfo.settingsActivity)
+                Log.d("LauncherUtilsPlugin", wallpaperManager.wallpaperInfo.settingsActivity)
                 hasSettings = true
             }
 
@@ -179,7 +182,7 @@ class HomeLauncherPlugin(private var registrar: PluginRegistry.Registrar) : Meth
 }
 
 // This needs to be in the app's android manifest file
-// <receiver android:name="com.rithvij.home_launcher.EventsReceiver" />
+// <receiver android:name="com.rithvij.launcher_utils.EventsReceiver" />
 // A receiver to get which one was chosen from the wallpaper chooser
 class EventsReceiver : BroadcastReceiver() {
     override fun onReceive(p0: Context, p1: Intent) {

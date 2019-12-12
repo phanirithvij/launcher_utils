@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/home_launcher.iml" filepath="$PROJECT_DIR$/home_launcher.iml" />
+      <module fileurl="file://$PROJECT_DIR$/launcher_utils.iml" filepath="$PROJECT_DIR$/launcher_utils.iml" />
     </modules>
   </component>
 </project>

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 
 import 'package:flutter/services.dart';
-import 'package:home_launcher/home_launcher.dart';
+import 'package:launcher_utils/launcher_utils.dart';
 
 void main() => runApp(MyApp());
 
@@ -23,7 +23,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> initPlatformState() async {
     String platformVersion;
     try {
-      platformVersion = await HomeLauncher.platformVersion;
+      platformVersion = await LauncherUtils.platformVersion;
     } on PlatformException {
       platformVersion = 'Failed to get platform version.';
     }
