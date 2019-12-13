@@ -70,6 +70,7 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
+        backgroundColor: Colors.transparent,
         body: Container(
           child: Column(
             children: <Widget>[
@@ -78,16 +79,16 @@ class _MyAppState extends State<MyApp> {
                   child: Text('Is Wallpaper Supported: $_isWallpaperSupported'),
                 ),
               ),
-              (_bytes != null)
-                  ? Image.memory(_bytes)
-                  : CircularProgressIndicator(),
+              // (_bytes != null)
+              //     ? Image.memory(_bytes)
+              //     : CircularProgressIndicator(),
             ],
           ),
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () async {
             bool isOpened = await PermissionHandler().openAppSettings();
-            print(isOpened);
+            print("The settings page is open: $isOpened");
           },
           child: Icon(Icons.settings),
         ),

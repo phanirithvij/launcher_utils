@@ -16,6 +16,9 @@ A flutter plugin that exposes some android APIs to help build home screen replac
     - [ ] Through Image
     - [ ] Live Wallpapers
     - [ ] Set wallpaper options (all avaialable activities)
+    - [ ] Set wallpaper methods
+      - [ ] Crop and set wallpaper
+      - [ ] Set using ...
   - [ ] Set Wallpaper Offsets
   - [ ] Set Wallpaper Offset Hints (?)
   - [ ] Link to a pageview controller
@@ -48,6 +51,12 @@ Extra (for my launcher) still open source
 - [ ] Apps
   - [ ] Save given configuration in db
 - [ ] App shortcut info
+  - [ ] Get app shortcuts
+  - [ ] Subscribe to these events
+    - [ ] Add shortcut to home page
+- [ ] Search Apps
+  - [ ] By name
+  - [ ] Open search term in play store
 
 (?) denotes it's unclear either whether to implement it or how to implement it (for me).
 
