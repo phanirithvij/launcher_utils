@@ -2,10 +2,7 @@ package com.rithvij.launcher_utils
 
 import android.app.PendingIntent
 import android.app.WallpaperManager
-import android.content.BroadcastReceiver
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
+import android.content.*
 import android.content.pm.ActivityInfo
 import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
@@ -14,6 +11,7 @@ import android.graphics.drawable.BitmapDrawable
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
+import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
@@ -25,20 +23,25 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
     private val wallpaperManager: WallpaperManager = WallpaperManager.getInstance(this.registrar.context())
     private val applicationContext = registrar.context()
     private val packageManager = applicationContext.packageManager
+    private val myListener = WallpaperListener()
 
     companion object {
         @JvmStatic
         fun registerWith(registrar: PluginRegistry.Registrar) {
-            val channel = MethodChannel(registrar.messenger(), "launcher_utils")
-            val plugin = LauncherUtilsPlugin(registrar)
-            channel.setMethodCallHandler(plugin)
+            val channel = MethodChannel(registrar.messenger(), "launcher_utils/api")
+            val pluginInstance = LauncherUtilsPlugin(registrar)
+            channel.setMethodCallHandler(pluginInstance)
+
+            // To send events to the flutter side if the wallpaper changes
+            val eventChannelName = "launcher_utils/events"
+            EventChannel(registrar.view(), eventChannelName).setStreamHandler(pluginInstance.myListener)
         }
 
-        @JvmStatic
-        fun disableTransparency(view: FlutterView) {
-            view.setZOrderMediaOverlay(false)
-            view.holder.setFormat(PixelFormat.OPAQUE)
-        }
+//        @JvmStatic
+//        fun disableTransparency(view: FlutterView) {
+//            view.setZOrderMediaOverlay(false)
+//            view.holder.setFormat(PixelFormat.OPAQUE)
+//        }
 
         @JvmStatic
         fun enableTransparency(view: FlutterView) {
@@ -47,6 +50,62 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
             view.setZOrderMediaOverlay(true)
             view.holder.setFormat(PixelFormat.TRANSPARENT)
             // view.enableTransparentBackground()
+        }
+    }
+
+    // https://medium.com/flutter/flutter-platform-channels-ce7f540a104e
+    inner class WallpaperListener : EventChannel.StreamHandler {
+        private var eventSink: EventChannel.EventSink? = null
+        lateinit var wallpaperEventReceiver: WallpaperEventReceiver
+        private val intentFilter = IntentFilter()
+
+        init {
+            // This was deprecated by android because
+            // It is not safe to set a wallpaper right after this event as it would cause a loop
+            // And this is the only way to know if the wallpaper changed
+            intentFilter.addAction(Intent.ACTION_WALLPAPER_CHANGED)
+            // https://www.techotopia.com/index.php/Android_Broadcast_Intents_and_Broadcast_Receivers
+        }
+
+        override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+            eventSink = events
+            if (eventSink != null) {
+                wallpaperEventReceiver = WallpaperEventReceiver(eventSink!!)
+                registerIfActive()
+            }
+        }
+
+        override fun onCancel(arguments: Any?) {
+            unregisterIfActive()
+            eventSink = null
+        }
+
+        private fun registerIfActive() {
+            if (eventSink == null) return
+            applicationContext.registerReceiver(wallpaperEventReceiver, intentFilter)
+        }
+
+        private fun unregisterIfActive() {
+            if (eventSink == null) return
+            try {
+                applicationContext.unregisterReceiver(wallpaperEventReceiver)
+            } catch (e: Exception) {
+            }
+        }
+
+    }
+
+    // Must be registered in the manifest file
+    class WallpaperEventReceiver() : BroadcastReceiver() {
+        private lateinit var events: EventChannel.EventSink
+
+        // This needs to be the syntax to avoid a build error in release mode
+        constructor(events: EventChannel.EventSink) : this() {
+            this.events = events
+        }
+
+        override fun onReceive(p0: Context?, p1: Intent?) {
+            events.success(if (p1 != null) p1.action else true)
         }
     }
 
@@ -120,7 +179,7 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
             "getDebugApps" -> {
                 result.success(getDebugApps())
             }
-            "emptyRegionGestures" -> {
+            "wallpaperCommand" -> {
                 // TODO : decide a name for this method
                 // Forward gestures to the live wallpaper
                 val args = call.arguments<ArrayList<Float>>()

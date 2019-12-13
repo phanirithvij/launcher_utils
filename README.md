@@ -59,6 +59,8 @@ Extra (for my launcher) still open source
   - [ ] Open search term in play store
 - [ ] Expose this as a BLOC (?, ??)
 
+- [ ] Refactor the android and dart code
+
 (?) denotes it's unclear whether to implement it.
 (??) denotes it's unclear how to implement it.
 

@@ -13,7 +13,7 @@
         android:icon="@mipmap/ic_launcher"
         android:label="launcher_utils_example"
         tools:ignore="GoogleAppIndexingWarning">
-        <receiver android:name="com.rithvij.launcher_utils.LauncherEventsReceiver" />
+
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
