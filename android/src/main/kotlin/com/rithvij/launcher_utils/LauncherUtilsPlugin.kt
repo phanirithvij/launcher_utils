@@ -13,6 +13,7 @@ import android.graphics.PixelFormat
 import android.graphics.drawable.BitmapDrawable
 import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
@@ -56,6 +57,13 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
             }
             "getLockScreen" -> {
                 getLockScreen(result)
+            }
+            "getWallpaperInfo" -> {
+                // TODO: Create a method and a format to send info on the currently set wallpaper something like `getWallpaperInfo`
+                // i.e. if it is a wallpaper send a thumbnail
+                // if it is a live wallpaper send the live wallpaper's icon, etc..
+                // So that the launcher can show this to the user as the currently set wallpaper
+                result.notImplemented()
             }
             "getPlatformVersion" -> {
                 result.success(Build.DEVICE)
@@ -112,6 +120,28 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
             "getDebugApps" -> {
                 result.success(getDebugApps())
             }
+            "emptyRegionGestures" -> {
+                // TODO : decide a name for this method
+                // Forward gestures to the live wallpaper
+                val args = call.arguments<ArrayList<Float>>()
+                sendWallpaperEvents(args)
+                result.success(true)
+            }
+            "getColors" -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                    val ret = getColors()
+                    result.success(ret)
+                } else {
+                    // TODO : Try an experimental extracting of colors if an argument is passed
+                    // TODO : Useful for API < 27
+                    result.error("requiresApi", "requires api 27", null)
+                }
+            }
+            "setWallpaperOffsets" -> {
+                val args = call.arguments<ArrayList<Float>>()
+                setWallpaperOffsets(args)
+                result.success(true)
+            }
             else -> {
                 result.notImplemented()
             }
@@ -159,12 +189,14 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
         // view.enableTransparentBackground()
     }
 
+    // A function to undo enableTransparency
     private fun disableTransparency() {
         val view = registrar.view()
         view.setZOrderMediaOverlay(false)
         view.holder.setFormat(PixelFormat.OPAQUE)
     }
 
+    // Launch an app based on it's package name
     private fun launchApp(packageName: String?, result: MethodChannel.Result) {
         if (packageName != null) {
             val intent = packageManager.getLaunchIntentForPackage(packageName)
@@ -179,6 +211,7 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
         }
     }
 
+    // Get the lock screen image
     // https://stackoverflow.com/a/53967444/8608146
     private fun getLockScreen(result: MethodChannel.Result) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -192,6 +225,8 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
         }
     }
 
+    // Get the current wallpaper
+    // Always returns a byte array
     private fun getWallpaper(result: MethodChannel.Result) {
 //        if (wallpaperManager.wallpaperInfo != null) {
 //            result.success(wallpaperManager.wallpaperInfo.packageName)
@@ -213,7 +248,7 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
 
         if (useChooser) {
             // https://stackoverflow.com/a/19159291/8608146
-            val receiver = Intent(applicationContext, EventsReceiver::class.java)
+            val receiver = Intent(applicationContext, LauncherEventsReceiver::class.java)
             val pendingIntent =
                     PendingIntent.getBroadcast(applicationContext, 0, receiver, PendingIntent.FLAG_UPDATE_CURRENT)
             // Create a chooser to prevent the user from checking don't ask again option
@@ -250,7 +285,7 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
             var hasSettings = false
             // if it has a settings activity
             if (wallpaperManager.wallpaperInfo.settingsActivity != null) {
-                Log.d("LauncherUtilsPlugin", wallpaperManager.wallpaperInfo.settingsActivity)
+                Log.d("LauncherUtils", wallpaperManager.wallpaperInfo.settingsActivity)
                 hasSettings = true
             }
 
@@ -275,14 +310,57 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
     private fun startActivity(intent: Intent) {
         registrar.context().startActivity(intent)
     }
+
+    private fun sendWallpaperEvents(position: ArrayList<Float>) {
+        Log.d("LauncherUtils", "Sending a Wallpaper command")
+
+        if (wallpaperManager.wallpaperInfo != null) {
+            // Only send a command if it is a live wallpaper
+            wallpaperManager.sendWallpaperCommand(
+                    registrar.view().windowToken,
+                    //if (event.action == MotionEvent.ACTION_UP)
+                    //  WallpaperManager.COMMAND_TAP else
+                    //  WallpaperManager.COMMAND_SECONDARY_TAP,
+                    WallpaperManager.COMMAND_TAP,
+                    position[0].toInt(), position[1].toInt(), 0, null
+            )
+        }
+
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O_MR1)
+    private fun getColors(): ArrayList<Int?>? {
+        val data = wallpaperManager.getWallpaperColors(WallpaperManager.FLAG_SYSTEM)
+
+        // Log.d(tag, "${data.primaryColor.red()} ${data.primaryColor.green()} ${data.primaryColor.blue()} ${data.primaryColor.alpha()}")
+        val colors = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            arrayOf(data?.primaryColor?.toArgb(), data?.secondaryColor?.toArgb(), data?.tertiaryColor?.toArgb())
+        } else {
+            arrayOf()
+        }
+        return ArrayList(colors.asList())
+    }
+
+    private fun setWallpaperOffsets(args: ArrayList<Float>) {
+        val position = args[0]
+        var numPages = args[1]
+
+        if (numPages <= 1) {
+            numPages = 2F
+        }
+
+        val xOffset = position / (numPages - 1)
+        wallpaperManager.setWallpaperOffsets(registrar.view().windowToken, xOffset, 0.0f)
+    }
+
 }
 
 // This needs to be in the app's android manifest file
-// <receiver android:name="com.rithvij.launcher_utils.EventsReceiver" />
+// <receiver android:name="com.rithvij.launcher_utils.LauncherEventsReceiver" />
 // A receiver to get which one was chosen from the wallpaper chooser
 // Also the events from the wallpaper colors changed listener
 // Also the events if the wallpaper has changed
-class EventsReceiver : BroadcastReceiver() {
+class LauncherEventsReceiver : BroadcastReceiver() {
     override fun onReceive(p0: Context, p1: Intent) {
         // https://stackoverflow.com/questions/9583230/what-is-the-purpose-of-intentsender#comment72280489_34314156
         // EXTRA_CHOSEN_COMPONENT requires API 22

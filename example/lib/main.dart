@@ -20,7 +20,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   String _isWallpaperSupported = 'Unknown';
-  dynamic _bytes;
+  // dynamic _bytes;
 
   @override
   void initState() {
@@ -61,9 +61,9 @@ class _MyAppState extends State<MyApp> {
     }
 
     if (!mounted) return;
-    setState(() {
-      _bytes = bytes;
-    });
+    // setState(() {
+    //   // _bytes = bytes;
+    // });
   }
 
   @override
@@ -72,6 +72,7 @@ class _MyAppState extends State<MyApp> {
       home: Scaffold(
         backgroundColor: Colors.transparent,
         body: Container(
+          // color: Colors.transparent,
           child: Column(
             children: <Widget>[
               Container(
