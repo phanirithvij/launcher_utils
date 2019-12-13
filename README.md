@@ -57,9 +57,10 @@ Extra (for my launcher) still open source
 - [ ] Search Apps
   - [ ] By name
   - [ ] Open search term in play store
+- [ ] Expose this as a BLOC (?, ??)
 
-(?) denotes it's unclear either whether to implement it or how to implement it (for me).
+(?) denotes it's unclear whether to implement it.
+(??) denotes it's unclear how to implement it.
 
 > Move this to top once it's done.
-
 > Check out my Launcher [play store link]() [coming soon].
