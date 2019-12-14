@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'dart:developer' as developer;
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -49,6 +50,8 @@ class LauncherUtils with ChangeNotifier {
   /// TODO: Give the function a proper type so that it accepts one argument.
   Future<void> onWallpaperChanged({Function callback}) async {
     _eventChannel.receiveBroadcastStream().listen((dynamic event) {
+      print(event);
+      developer.log("${event.runtimeType}");
       notifyListeners();
       if (callback != null) callback(event);
     }, onError: (dynamic error) {
@@ -72,12 +75,30 @@ class LauncherUtils with ChangeNotifier {
 
   /// Sets the given wallpaper
   /// If no argument is provided, opens the wallpaper chooser
-  static Future<void> setWallpaper({ImageProvider image}) async {
+  static Future<void> setWallpaper({
+    ImageProvider image,
+    bool useChooser: false,
+  }) async {
     if (image == null) {
-      await _channel.invokeMethod('setWallpaper');
+      developer.log("requesting to setWallpaper");
+      await _channel.invokeMethod('setWallpaper', {"chooser": useChooser});
     } else {
-      // TODO: Convert to bytes and send it
-      await _channel.invokeMethod('setWallpaper', image);
+      image.resolve(ImageConfiguration()).addListener(
+        ImageStreamListener((img, a) async {
+          developer.log(a.toString());
+          var data = await img.image.toByteData(format: ui.ImageByteFormat.png);
+          // https://stackoverflow.com/a/50121777/8608146
+          // TODO: On android side `wallpaperManager.setBitmap` is not perfect
+          var view = data.buffer.asUint8List();
+          print(view.length);
+          var response = await _channel.invokeMethod(
+            'setWallpaper',
+            {"image": view},
+          );
+
+          developer.log(response.toString());
+        }),
+      );
       // Returns whether setting the wallpaper succeeded
     }
   }
@@ -184,6 +205,15 @@ class LauncherUtils with ChangeNotifier {
       await _channel.invokeMethod("setWallpaperOffsets", [position, numPages]);
     } on PlatformException catch (e) {
       developer.log("Failed to change wallpaper offsets", error: e);
+    }
+  }
+
+  /// Live Wallpaper chooser
+  Future<void> openLiveWallpaperChooser() async {
+    try {
+      await _channel.invokeMethod('openLiveWallpaperChooser');
+    } on PlatformException catch (e) {
+      developer.log("Failed to open live wallpaper chooser", error: e);
     }
   }
 }

@@ -25,6 +25,12 @@ class _MyAppState extends State<MyApp> {
   );
 
   @override
+  void initState() {
+    super.initState();
+    launcherApi.updateScrollEvents();
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     launcherApi.updateScrollEvents();
@@ -103,6 +109,24 @@ class FloatButtons extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
       children: <Widget>[
+        FloatingActionButton(
+          onPressed: () => LauncherUtils.getWallpaper(),
+          child: Icon(Icons.wallpaper),
+        ),
+        SizedBox(height: 10),
+        FloatingActionButton(
+          onPressed: () => launcherApi.openLiveWallpaperChooser(),
+          child: Icon(Icons.image),
+        ),
+        SizedBox(height: 10),
+        FloatingActionButton(
+          // onPressed: () => LauncherUtils.setWallpaper(useChooser: true),
+          onPressed: () {
+            LauncherUtils.setWallpaper(image: AssetImage("assets/test.jpg"));
+          },
+          child: Icon(Icons.photo_size_select_actual),
+        ),
+        SizedBox(height: 10),
         FloatingActionButton(
           onPressed: () async {
             bool isOpened = await PermissionHandler().openAppSettings();

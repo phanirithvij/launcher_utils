@@ -10,7 +10,6 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
     <application>
-        <receiver android:name=".LauncherUtilsPlugin$WallpaperEventReceiver" />
         <receiver android:name=".LauncherEventsReceiver" />
     </application>
 

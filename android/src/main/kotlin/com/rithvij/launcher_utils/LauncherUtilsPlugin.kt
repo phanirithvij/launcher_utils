@@ -5,7 +5,9 @@ import android.app.WallpaperManager
 import android.content.*
 import android.content.pm.ActivityInfo
 import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.PixelFormat
 import android.graphics.drawable.BitmapDrawable
 import android.os.Build
@@ -19,11 +21,15 @@ import io.flutter.plugin.common.PluginRegistry
 import io.flutter.view.FlutterView
 import java.io.ByteArrayOutputStream
 
+const val tag = "LauncherUtils"
+// This must be global so that all the receivers can access the event channel
+lateinit var globalPlugin: LauncherUtilsPlugin
+
 class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : MethodCallHandler {
     private val wallpaperManager: WallpaperManager = WallpaperManager.getInstance(this.registrar.context())
-    private val applicationContext = registrar.context()
-    private val packageManager = applicationContext.packageManager
-    private val myListener = WallpaperListener()
+    val applicationContext: Context = registrar.context()
+    private val packageManager: PackageManager = applicationContext.packageManager
+    val wallpaperListener = WallpaperListener()
 
     companion object {
         @JvmStatic
@@ -32,9 +38,11 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
             val pluginInstance = LauncherUtilsPlugin(registrar)
             channel.setMethodCallHandler(pluginInstance)
 
+            globalPlugin = pluginInstance
+
             // To send events to the flutter side if the wallpaper changes
             val eventChannelName = "launcher_utils/events"
-            EventChannel(registrar.view(), eventChannelName).setStreamHandler(pluginInstance.myListener)
+            EventChannel(registrar.view(), eventChannelName).setStreamHandler(pluginInstance.wallpaperListener)
         }
 
 //        @JvmStatic
@@ -50,63 +58,6 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
             view.setZOrderMediaOverlay(true)
             view.holder.setFormat(PixelFormat.TRANSPARENT)
             // view.enableTransparentBackground()
-        }
-    }
-
-    // https://medium.com/flutter/flutter-platform-channels-ce7f540a104e
-    inner class WallpaperListener : EventChannel.StreamHandler {
-        private var eventSink: EventChannel.EventSink? = null
-        lateinit var wallpaperEventReceiver: WallpaperEventReceiver
-        private val intentFilter = IntentFilter()
-
-        init {
-            // This was deprecated by android because
-            // It is not safe to set a wallpaper right after this event as it would cause a loop
-            // And this is the only way to know if the wallpaper changed
-            intentFilter.addAction(Intent.ACTION_WALLPAPER_CHANGED)
-            // https://www.techotopia.com/index.php/Android_Broadcast_Intents_and_Broadcast_Receivers
-        }
-
-        override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
-            eventSink = events
-            if (eventSink != null) {
-                wallpaperEventReceiver = WallpaperEventReceiver(eventSink!!)
-                registerIfActive()
-            }
-        }
-
-        override fun onCancel(arguments: Any?) {
-            unregisterIfActive()
-            eventSink = null
-        }
-
-        private fun registerIfActive() {
-            if (eventSink == null) return
-            applicationContext.registerReceiver(wallpaperEventReceiver, intentFilter)
-        }
-
-        private fun unregisterIfActive() {
-            if (eventSink == null) return
-            try {
-                applicationContext.unregisterReceiver(wallpaperEventReceiver)
-            } catch (e: Exception) {
-            }
-        }
-
-    }
-
-    // Must be registered in the manifest file
-    // I registered it in the plugin's manifest file
-    class WallpaperEventReceiver() : BroadcastReceiver() {
-        private lateinit var events: EventChannel.EventSink
-
-        // This needs to be the syntax to avoid a build error in release mode
-        constructor(events: EventChannel.EventSink) : this() {
-            this.events = events
-        }
-
-        override fun onReceive(p0: Context?, p1: Intent?) {
-            events.success(if (p1 != null) p1.action else true)
         }
     }
 
@@ -155,15 +106,15 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
             }
             "setWallpaper" -> {
                 if (call.hasArgument("image")) {
-                    setWallpaper(call.argument<ByteArray>("image"))
+                    setWallpaper(call.argument<ByteArray>("image")!!, result)
                 } else {
                     var useChooser = false
                     if (call.hasArgument("chooser")) {
                         useChooser = call.argument<Boolean>("chooser")!!
                     }
                     setWallpaper(useChooser)
+                    result.success(true)
                 }
-                result.success(true)
             }
             "openLiveWallpaperChooser" -> {
                 openLiveWallpaperChooser(result)
@@ -194,7 +145,7 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
                 } else {
                     // TODO : Try an experimental extracting of colors if an argument is passed
                     // TODO : Useful for API < 27
-                    result.error("requiresApi", "requires api 27", null)
+                    result.error("requiresApi", "requires Oreo 8.1", null)
                 }
             }
             "setWallpaperOffsets" -> {
@@ -232,8 +183,8 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
         val providers = packageManager.queryIntentActivities(intent, 0)
         val ret = arrayListOf<String>()
         providers.forEach {
-            Log.d("LauncherUtils", it.activityInfo.packageName)
-            Log.d("LauncherUtils", it.activityInfo.targetActivity)
+            Log.d(tag, it.activityInfo.packageName)
+            Log.d(tag, it.activityInfo.targetActivity)
             ret.add(it.activityInfo.packageName)
         }
         return ret
@@ -311,6 +262,7 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
             val receiver = Intent(applicationContext, LauncherEventsReceiver::class.java)
             val pendingIntent =
                     PendingIntent.getBroadcast(applicationContext, 0, receiver, PendingIntent.FLAG_UPDATE_CURRENT)
+
             // Create a chooser to prevent the user from checking don't ask again option
             val chooser = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
                 Intent.createChooser(intent, "Set Wallpaper", pendingIntent.intentSender)
@@ -323,8 +275,32 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
         }
     }
 
-    private fun setWallpaper(image: ByteArray?) {
-        // TODO
+    private fun setWallpaper(image: ByteArray, result: MethodChannel.Result) {
+        val bitmap = BitmapFactory.decodeByteArray(image, 0, image.size)
+        if (bitmap == null) {
+            result.error("failed", "Decoding the image failed", null)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            if (wallpaperManager.isSetWallpaperAllowed) {
+                try {
+                    wallpaperManager.setBitmap(bitmap)
+                    Log.d(tag,
+                            wallpaperManager.drawable.bounds.width().toString())
+                    result.success(true)
+                } catch (e: Exception) {
+                    result.error("failed", "Setting the image as the wallpaper failed", null)
+                }
+            } else {
+                result.error("failed", "Setting the image as the wallpaper failed", null)
+            }
+        } else {
+            try {
+                wallpaperManager.setBitmap(bitmap)
+                result.success(true)
+            } catch (e: Exception) {
+                result.error("failed", "Setting the image as the wallpaper failed", null)
+            }
+        }
     }
 
 
@@ -345,7 +321,7 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
             var hasSettings = false
             // if it has a settings activity
             if (wallpaperManager.wallpaperInfo.settingsActivity != null) {
-                Log.d("LauncherUtils", wallpaperManager.wallpaperInfo.settingsActivity)
+                Log.d(tag, wallpaperManager.wallpaperInfo.settingsActivity)
                 hasSettings = true
             }
 
@@ -355,7 +331,7 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
                                 wallpaperManager.wallpaperInfo.packageName,
                                 wallpaperManager.wallpaperInfo.settingsActivity
                         )
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
                 startActivity(intent)
                 result.success(true)
             } else {
@@ -366,13 +342,15 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
         }
     }
 
-    // Just a shortcut method instead of calling re.con().star.. every time
+    // Just a shortcut method instead of calling re.activity().star.. every time
     private fun startActivity(intent: Intent) {
-        registrar.context().startActivity(intent)
+        // Must call the activity()'s startActivity instead of context()'s
+        // this is a solution to the https://stackoverflow.com/q/3918517/8608146 problem
+        registrar.activity().startActivity(intent)
     }
 
     private fun sendWallpaperEvents(position: ArrayList<Float>) {
-        Log.d("LauncherUtils", "Sending a Wallpaper command")
+        Log.d(tag, "Sending a Wallpaper command")
 
         if (wallpaperManager.wallpaperInfo != null) {
             // Only send a command if it is a live wallpaper
@@ -413,6 +391,71 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
         wallpaperManager.setWallpaperOffsets(registrar.view().windowToken, xOffset, 0.0f)
     }
 
+    // https://medium.com/flutter/flutter-platform-channels-ce7f540a104e
+    inner class WallpaperListener : EventChannel.StreamHandler {
+        var eventSink: EventChannel.EventSink? = null
+        private lateinit var wallpaperEventReceiver: WallpaperEventReceiver
+        //        private lateinit var launcherEventsReceiver: LauncherEventsReceiver
+        private val intentFilter = IntentFilter()
+
+        init {
+            // This was deprecated by android because
+            // It is not safe to set a wallpaper right after this event as it would cause a loop
+            // And this is the only way to know if the wallpaper changed
+            intentFilter.addAction(Intent.ACTION_WALLPAPER_CHANGED)
+            // https://www.techotopia.com/index.php/Android_Broadcast_Intents_and_Broadcast_Receivers
+        }
+
+        override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+            eventSink = events
+            if (eventSink != null) {
+                wallpaperEventReceiver = WallpaperEventReceiver(eventSink!!)
+//                launcherEventsReceiver = LauncherEventsReceiver(eventSink!!)
+                registerIfActive()
+            }
+        }
+
+        override fun onCancel(arguments: Any?) {
+            unregisterIfActive()
+            eventSink = null
+        }
+
+        private fun registerIfActive() {
+            if (eventSink == null) return
+            applicationContext.registerReceiver(wallpaperEventReceiver, intentFilter)
+//            applicationContext.registerReceiver(launcherEventsReceiver, IntentFilter())
+        }
+
+        private fun unregisterIfActive() {
+            if (eventSink == null) return
+            try {
+                applicationContext.unregisterReceiver(wallpaperEventReceiver)
+            } catch (e: Exception) {
+            }
+//            try {
+//                applicationContext.unregisterReceiver(launcherEventsReceiver)
+//            } catch (e: Exception) {
+//            }
+        }
+
+    }
+
+
+}
+
+// Must be registered in the manifest file
+// I registered it in the plugin's manifest file
+class WallpaperEventReceiver() : BroadcastReceiver() {
+    private lateinit var events: EventChannel.EventSink
+
+    // This needs to be the syntax to avoid a build error in release mode
+    constructor(events: EventChannel.EventSink) : this() {
+        this.events = events
+    }
+
+    override fun onReceive(p0: Context, p1: Intent) {
+        events.success(p1.action)
+    }
 }
 
 // This needs to be added as a receiver in the app's android manifest file
@@ -420,15 +463,29 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
 // A receiver to get which one was chosen from the wallpaper chooser
 // TODO: Also the events from the wallpaper colors changed listener
 // TODO: Also the events if the wallpaper has changed
+
 class LauncherEventsReceiver : BroadcastReceiver() {
+    private lateinit var events: EventChannel.EventSink
+
+    init {
+//        Log.d(tag, "INIT Events receiver")
+        if (!::events.isInitialized) {
+            events = globalPlugin.wallpaperListener.eventSink!!
+        }
+    }
+
     override fun onReceive(p0: Context, p1: Intent) {
         // https://stackoverflow.com/questions/9583230/what-is-the-purpose-of-intentsender#comment72280489_34314156
         // EXTRA_CHOSEN_COMPONENT requires API 22
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
             Log.d(
-                    "MainActivity",
+                    tag,
                     p1.extras?.getParcelable<ComponentName>(Intent.EXTRA_CHOSEN_COMPONENT)!!.toString()
             )
+            events.success(p1.extras?.getParcelable<ComponentName>(Intent.EXTRA_CHOSEN_COMPONENT)!!.toString())
         }
+        // Need to do this if registered somewhere in code
+        // globalPlugin.applicationContext.unregisterReceiver(this)
     }
 }
+
