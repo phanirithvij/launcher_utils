@@ -11,6 +11,7 @@
         android:name="io.flutter.app.FlutterApplication"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
+        android:theme="@style/Theme.Transparent"
         android:label="launcher_utils_example"
         tools:ignore="GoogleAppIndexingWarning">
 

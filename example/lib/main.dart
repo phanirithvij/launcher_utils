@@ -1,14 +1,13 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:async';
+
+import 'dart:developer' as developer;
 
 import 'package:launcher_utils/launcher_utils.dart';
-import 'package:launcher_utils/exceptions.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(MyApp());
   SystemChrome.setEnabledSystemUIOverlays([]);
 }
@@ -19,51 +18,16 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  String _isWallpaperSupported = 'Unknown';
-  // dynamic _bytes;
+  var launcherApi = LauncherUtils(
+    initColors: true,
+    pageCount: 8,
+    subscribeWallpaperChanges: true,
+  );
 
   @override
-  void initState() {
-    super.initState();
-    initPlatformState();
-    getWallpaper();
-  }
-
-  Future<void> initPlatformState() async {
-    String isWallpaperSupported;
-    bool supported = await LauncherUtils.isWallpaperSupported;
-    if (supported == null) {
-      isWallpaperSupported = 'Unknown';
-    } else {
-      isWallpaperSupported = supported ? "Supported" : "Not Supported";
-    }
-
-    // If the widget was removed from the tree while the asynchronous platform
-    // message was in flight, we want to discard the reply rather than calling
-    // setState to update our non-existent appearance.
-    if (!mounted) return;
-
-    setState(() {
-      _isWallpaperSupported = isWallpaperSupported;
-    });
-  }
-
-  Future<void> getWallpaper() async {
-    Uint8List bytes;
-    try {
-      bytes = await LauncherUtils.getWallpaper();
-      print(bytes.runtimeType);
-    } on PermissionDeniedException catch (e) {
-      // open settings or show snackbar
-      print(e);
-    } on Exception catch (e) {
-      print(e);
-    }
-
-    if (!mounted) return;
-    // setState(() {
-    //   // _bytes = bytes;
-    // });
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    launcherApi.updateScrollEvents();
   }
 
   @override
@@ -71,28 +35,123 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       home: Scaffold(
         backgroundColor: Colors.transparent,
-        body: Container(
-          // color: Colors.transparent,
-          child: Column(
-            children: <Widget>[
-              Container(
-                child: Center(
-                  child: Text('Is Wallpaper Supported: $_isWallpaperSupported'),
-                ),
+        body: HomePage(launcherApi: launcherApi),
+        floatingActionButton: FloatButtons(launcherApi: launcherApi),
+      ),
+    );
+  }
+}
+
+class HomePage extends StatelessWidget {
+  const HomePage({
+    Key key,
+    @required this.launcherApi,
+  }) : super(key: key);
+
+  final LauncherUtils launcherApi;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: <Widget>[
+        ColorWidgets(launcherApi: launcherApi),
+        GestureDetector(
+          child: SizedBox.expand(
+            child: Container(
+              child: PageView(
+                controller: launcherApi.scrollController,
+                children: _getPages(launcherApi.pageCount),
               ),
-              // (_bytes != null)
-              //     ? Image.memory(_bytes)
-              //     : CircularProgressIndicator(),
-            ],
+            ),
+          ),
+          onTapDown: (ev) => launcherApi.sendWallpaperCommand(ev),
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _getPages(int pageCount) {
+    var pages = <Widget>[];
+    for (int i = 0; i < pageCount; i++) {
+      pages.add(
+        Container(
+          child: Center(
+            child: Text(
+              "Page ${i + 1}",
+              style: TextStyle(
+                fontSize: 20,
+              ),
+            ),
           ),
         ),
-        floatingActionButton: FloatingActionButton(
+      );
+    }
+    return pages;
+  }
+}
+
+class FloatButtons extends StatelessWidget {
+  const FloatButtons({
+    Key key,
+    @required this.launcherApi,
+  }) : super(key: key);
+
+  final LauncherUtils launcherApi;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: <Widget>[
+        FloatingActionButton(
           onPressed: () async {
             bool isOpened = await PermissionHandler().openAppSettings();
-            print("The settings page is open: $isOpened");
+            developer.log("The settings page is open: $isOpened");
           },
           child: Icon(Icons.settings),
         ),
+        SizedBox(height: 10),
+        FloatingActionButton(
+          onPressed: () {
+            launcherApi.getWallpaperColors();
+          },
+          child: Icon(Icons.palette),
+        ),
+      ],
+    );
+  }
+}
+
+class ColorWidgets extends StatelessWidget {
+  const ColorWidgets({
+    Key key,
+    @required this.launcherApi,
+  }) : super(key: key);
+
+  final LauncherUtils launcherApi;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: <Widget>[
+          Container(
+            width: 100,
+            height: 100,
+            color: launcherApi.colors[0],
+          ),
+          Container(
+            width: 100,
+            height: 100,
+            color: launcherApi.colors[1],
+          ),
+          Container(
+            width: 100,
+            height: 100,
+            color: launcherApi.colors[2],
+          ),
+        ],
       ),
     );
   }

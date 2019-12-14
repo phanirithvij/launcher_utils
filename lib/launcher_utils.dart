@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'dart:developer' as developer;
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -14,14 +15,15 @@ class LauncherUtils with ChangeNotifier {
   PageController scrollController;
   bool scroll = true;
   int pageCount = 7;
+  List<Color> colors = [Colors.black, Colors.black, Colors.black];
 
   static const _channel = const MethodChannel('launcher_utils/api');
   static const _eventChannel = const EventChannel('launcher_utils/events');
 
-  /// Set [initColors] to true if need to fecth colors during initialization
-  /// Scroll is enabled by default
-  /// Use [enableScroll], [disableScroll], [toggleScroll] to control stuff
-  /// The [controller] is used for scroll events if provided
+  /// Set [initColors] to true if need to fecth colors during initialization.
+  /// Scroll is enabled by default.
+  /// Use [enableScroll], [disableScroll], [toggleScroll] to control scrolling.
+  /// The [controller] is used for scroll events if provided.
   LauncherUtils({
     PageController controller,
     bool initColors: false,
@@ -42,8 +44,9 @@ class LauncherUtils with ChangeNotifier {
     return version;
   }
 
-  /// On wallpaper change execute the [callback]
-  /// It recieves an argument [event]
+  /// On wallpaper change execute the [callback].
+  /// It recieves an argument [event].
+  /// TODO: Give the function a proper type so that it accepts one argument.
   Future<void> onWallpaperChanged({Function callback}) async {
     _eventChannel.receiveBroadcastStream().listen((dynamic event) {
       notifyListeners();
@@ -79,6 +82,21 @@ class LauncherUtils with ChangeNotifier {
     }
   }
 
+  Future<void> getWallpaperImage(State widget) async {
+    Uint8List bytes;
+    try {
+      bytes = await LauncherUtils.getWallpaper();
+      print(bytes.runtimeType);
+    } on PermissionDeniedException catch (e) {
+      // open settings or show snackbar
+      print(e);
+    } on Exception catch (e) {
+      print(e);
+    }
+
+    if (!widget.mounted) return;
+  }
+
   /// Returns the wallpaper as a byte array.
   /// Use [Image.memory] to display it
   static Future getWallpaper() async {
@@ -108,9 +126,9 @@ class LauncherUtils with ChangeNotifier {
   /// Wrapper around android's `WallpaperManager.getWallpaperColors`
   /// Requires min Api 27
   Future<List<Color>> getWallpaperColors() async {
-    List<Color> colors = [Colors.black, Colors.black, Colors.black];
     try {
       List data = await _channel.invokeMethod("getColors");
+      colors.clear();
       data.forEach((c) {
         Color col;
         if (c != null) {

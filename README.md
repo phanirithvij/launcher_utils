@@ -34,8 +34,9 @@ A flutter plugin that exposes some android APIs to help build home screen replac
   - [ ] New app installed/uninstalled events
     - [ ] Also provides a flag to check if it's an icon pack
   - [ ] Launch an App
-- [ ] Icon Packs
+- [ ] Icon Packs (Look at Launcher3, OpenLauncher)
   - [ ] Get supported icon packs
+    - [ ] Their icons and labels
   - [ ] For each icon pack provide icon path and label
   - [ ] A method to get the icon (?)
 - [ ] Send events to live wallpaper
@@ -58,7 +59,7 @@ Extra (for my launcher) still open source
   - [ ] By name
   - [ ] Open search term in play store
 - [ ] Expose this as a BLOC (?, ??)
-
+- [ ] Blurred Wallpaper (??)
 - [ ] Refactor the android and dart code
 
 (?) denotes it's unclear whether to implement it.

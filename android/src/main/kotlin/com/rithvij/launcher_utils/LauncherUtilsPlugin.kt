@@ -96,6 +96,7 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
     }
 
     // Must be registered in the manifest file
+    // I registered it in the plugin's manifest file
     class WallpaperEventReceiver() : BroadcastReceiver() {
         private lateinit var events: EventChannel.EventSink
 
@@ -414,11 +415,11 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
 
 }
 
-// This needs to be in the app's android manifest file
-// <receiver android:name="com.rithvij.launcher_utils.LauncherEventsReceiver" />
+// This needs to be added as a receiver in the app's android manifest file
+// I added it to the plugin's manifest file which will get merged with any app that uses this
 // A receiver to get which one was chosen from the wallpaper chooser
-// Also the events from the wallpaper colors changed listener
-// Also the events if the wallpaper has changed
+// TODO: Also the events from the wallpaper colors changed listener
+// TODO: Also the events if the wallpaper has changed
 class LauncherEventsReceiver : BroadcastReceiver() {
     override fun onReceive(p0: Context, p1: Intent) {
         // https://stackoverflow.com/questions/9583230/what-is-the-purpose-of-intentsender#comment72280489_34314156
