@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'dart:developer' as developer;
 
 import 'package:launcher_utils/launcher_utils.dart';
+import 'package:launcher_utils_example/utils.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 void main() {
@@ -39,6 +40,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      theme: buildAmoledTheme(),
       home: Scaffold(
         backgroundColor: Colors.transparent,
         body: HomePage(launcherApi: launcherApi),
@@ -106,9 +108,14 @@ class FloatButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: <Widget>[
+        FloatingActionButton(
+          onPressed: () => launcherApi.openLiveWallpaperSettings(),
+          child: Icon(Icons.settings_brightness),
+        ),
+        SizedBox(height: 10),
         FloatingActionButton(
           onPressed: () => LauncherUtils.getWallpaper(),
           child: Icon(Icons.wallpaper),
@@ -120,10 +127,10 @@ class FloatButtons extends StatelessWidget {
         ),
         SizedBox(height: 10),
         FloatingActionButton(
-          // onPressed: () => LauncherUtils.setWallpaper(useChooser: true),
-          onPressed: () {
-            LauncherUtils.setWallpaper(image: AssetImage("assets/test.jpg"));
-          },
+          onPressed: () => LauncherUtils.setWallpaper(useChooser: true),
+          // onPressed: () {
+          //   LauncherUtils.setWallpaper(image: AssetImage("assets/test.jpg"));
+          // },
           child: Icon(Icons.photo_size_select_actual),
         ),
         SizedBox(height: 10),

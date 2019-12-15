@@ -32,8 +32,8 @@ class LauncherUtils with ChangeNotifier {
     int pageCount,
   }) {
     if (subscribeWallpaperChanges)
-      onWallpaperChanged(callback: (event) {
-        print('Received Wallpaper changed event: $event');
+      onEvent(callback: (event) {
+        print('Received an event: $event');
       });
     if (initColors) getWallpaperColors();
     scrollController = (controller == null) ? PageController() : controller;
@@ -45,13 +45,14 @@ class LauncherUtils with ChangeNotifier {
     return version;
   }
 
-  /// On wallpaper change execute the [callback].
+  /// On event change execute the [callback].
   /// It recieves an argument [event].
   /// TODO: Give the function a proper type so that it accepts one argument.
-  Future<void> onWallpaperChanged({Function callback}) async {
+  Future<void> onEvent({Function callback}) async {
     _eventChannel.receiveBroadcastStream().listen((dynamic event) {
       print(event);
       developer.log("${event.runtimeType}");
+      // notify listeners to only subscribed events
       notifyListeners();
       if (callback != null) callback(event);
     }, onError: (dynamic error) {
@@ -90,7 +91,7 @@ class LauncherUtils with ChangeNotifier {
           // https://stackoverflow.com/a/50121777/8608146
           // TODO: On android side `wallpaperManager.setBitmap` is not perfect
           var view = data.buffer.asUint8List();
-          print(view.length);
+          print("height: ${img.image.height}, width: ${img.image.width}");
           var response = await _channel.invokeMethod(
             'setWallpaper',
             {"image": view},
@@ -214,6 +215,26 @@ class LauncherUtils with ChangeNotifier {
       await _channel.invokeMethod('openLiveWallpaperChooser');
     } on PlatformException catch (e) {
       developer.log("Failed to open live wallpaper chooser", error: e);
+    }
+  }
+
+  /// Returns true if the wallpaper is a live wallpaper
+  Future<bool> isLiveWallpaper() async {
+    try {
+      return await _channel.invokeMethod('isLiveWallpaper');
+    } on PlatformException catch (e) {
+      developer.log("Failed to check if wallpaper is a live wallpaper",
+          error: e);
+      return false;
+    }
+  }
+
+  /// Current live Wallpaper settings
+  Future<void> openLiveWallpaperSettings() async {
+    try {
+      await _channel.invokeMethod('openLiveWallpaperSettings');
+    } on PlatformException catch (e) {
+      developer.log("Failed to open live wallpaper settings", error: e);
     }
   }
 }

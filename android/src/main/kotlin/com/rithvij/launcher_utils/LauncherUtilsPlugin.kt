@@ -9,8 +9,10 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.PixelFormat
+import android.graphics.Rect
 import android.graphics.drawable.BitmapDrawable
 import android.os.Build
+import android.util.DisplayMetrics
 import android.util.Log
 import androidx.annotation.RequiresApi
 import io.flutter.plugin.common.EventChannel
@@ -253,6 +255,9 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
 //        }
     }
 
+//    startActivity(new Intent(WallpaperManager.WALLPAPER_PREVIEW_META_DATA));
+
+
     // This just opens the chooser based on the flag
     private fun setWallpaper(useChooser: Boolean) {
         val intent = Intent(Intent.ACTION_SET_WALLPAPER)
@@ -276,29 +281,65 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
     }
 
     private fun setWallpaper(image: ByteArray, result: MethodChannel.Result) {
-        val bitmap = BitmapFactory.decodeByteArray(image, 0, image.size)
+        var bitmap = BitmapFactory.decodeByteArray(image, 0, image.size)
         if (bitmap == null) {
             result.error("failed", "Decoding the image failed", null)
+            return
         }
+        Log.d(tag, "height: ${bitmap.height}, width: ${bitmap.width}")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             if (wallpaperManager.isSetWallpaperAllowed) {
                 try {
-                    wallpaperManager.setBitmap(bitmap)
-                    Log.d(tag,
-                            wallpaperManager.drawable.bounds.width().toString())
+//                    wallpaperManager.getCropAndSetWallpaperIntent(Uri.)
+                    setWallpaperFromBitmap(bitmap)
                     result.success(true)
                 } catch (e: Exception) {
-                    result.error("failed", "Setting the image as the wallpaper failed", null)
+                    result.error("failed", "Setting the image as the wallpaper failed", e)
                 }
             } else {
                 result.error("failed", "Setting the image as the wallpaper failed", null)
             }
         } else {
             try {
-                wallpaperManager.setBitmap(bitmap)
+                setWallpaperFromBitmap(bitmap)
                 result.success(true)
             } catch (e: Exception) {
                 result.error("failed", "Setting the image as the wallpaper failed", null)
+            }
+        }
+
+        // clean up
+        bitmap.recycle()
+        bitmap = null
+    }
+
+    private fun setWallpaperFromBitmap(bitmap: Bitmap) {
+        val metrics = DisplayMetrics()
+        registrar.activity().windowManager.defaultDisplay.getMetrics(metrics)
+        Log.d(tag, "screen height: ${metrics.heightPixels}, width: ${metrics.widthPixels}")
+        wallpaperManager.run {
+            val totWidth = bitmap.width * (metrics.heightPixels / metrics.widthPixels.toFloat())
+            val onePageWidth = ((metrics.widthPixels / metrics.heightPixels.toFloat()) * bitmap.height).toInt()
+            val numPages = (totWidth / onePageWidth).toInt()
+            Log.d(tag, "Num pages is $numPages")
+            Log.d(tag, "One page width is $onePageWidth")
+            Log.d(tag, "Total width is $totWidth")
+            val x = onePageWidth * 3
+            val y = 0
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                setBitmap(
+                        bitmap,
+                        Rect(
+                                x,
+                                y,
+                                onePageWidth + x,
+                                bitmap.height + y
+                        ),
+                        false,
+                        WallpaperManager.FLAG_SYSTEM
+                )
+            } else {
+                wallpaperManager.setBitmap(bitmap)
             }
         }
     }
@@ -395,7 +436,6 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
     inner class WallpaperListener : EventChannel.StreamHandler {
         var eventSink: EventChannel.EventSink? = null
         private lateinit var wallpaperEventReceiver: WallpaperEventReceiver
-        //        private lateinit var launcherEventsReceiver: LauncherEventsReceiver
         private val intentFilter = IntentFilter()
 
         init {
@@ -410,7 +450,6 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
             eventSink = events
             if (eventSink != null) {
                 wallpaperEventReceiver = WallpaperEventReceiver(eventSink!!)
-//                launcherEventsReceiver = LauncherEventsReceiver(eventSink!!)
                 registerIfActive()
             }
         }
@@ -423,7 +462,6 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
         private fun registerIfActive() {
             if (eventSink == null) return
             applicationContext.registerReceiver(wallpaperEventReceiver, intentFilter)
-//            applicationContext.registerReceiver(launcherEventsReceiver, IntentFilter())
         }
 
         private fun unregisterIfActive() {
@@ -432,10 +470,6 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
                 applicationContext.unregisterReceiver(wallpaperEventReceiver)
             } catch (e: Exception) {
             }
-//            try {
-//                applicationContext.unregisterReceiver(launcherEventsReceiver)
-//            } catch (e: Exception) {
-//            }
         }
 
     }
@@ -482,6 +516,7 @@ class LauncherEventsReceiver : BroadcastReceiver() {
                     tag,
                     p1.extras?.getParcelable<ComponentName>(Intent.EXTRA_CHOSEN_COMPONENT)!!.toString()
             )
+            // Send a json object with event type and details instead of this
             events.success(p1.extras?.getParcelable<ComponentName>(Intent.EXTRA_CHOSEN_COMPONENT)!!.toString())
         }
         // Need to do this if registered somewhere in code
