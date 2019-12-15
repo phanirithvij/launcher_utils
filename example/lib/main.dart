@@ -115,17 +115,14 @@ class FloatButtons extends StatelessWidget {
           onPressed: () => launcherApi.openLiveWallpaperSettings(),
           child: Icon(Icons.settings_brightness),
         ),
-        SizedBox(height: 10),
         FloatingActionButton(
           onPressed: () => LauncherUtils.getWallpaper(),
           child: Icon(Icons.wallpaper),
         ),
-        SizedBox(height: 10),
         FloatingActionButton(
           onPressed: () => launcherApi.openLiveWallpaperChooser(),
           child: Icon(Icons.image),
         ),
-        SizedBox(height: 10),
         FloatingActionButton(
           onPressed: () => LauncherUtils.setWallpaper(useChooser: true),
           // onPressed: () {
@@ -133,7 +130,6 @@ class FloatButtons extends StatelessWidget {
           // },
           child: Icon(Icons.photo_size_select_actual),
         ),
-        SizedBox(height: 10),
         FloatingActionButton(
           onPressed: () async {
             bool isOpened = await PermissionHandler().openAppSettings();
@@ -141,7 +137,6 @@ class FloatButtons extends StatelessWidget {
           },
           child: Icon(Icons.settings),
         ),
-        SizedBox(height: 10),
         FloatingActionButton(
           onPressed: () {
             launcherApi.getWallpaperColors();
