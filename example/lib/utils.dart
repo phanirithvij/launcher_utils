@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+/// An Amoled theme (kinda)
 ThemeData buildAmoledTheme() {
   // reference : https://github.com/bimsina/wallpaper/blob/master/lib/bloc/utils.dart#L34
   final ThemeData base = ThemeData.dark();

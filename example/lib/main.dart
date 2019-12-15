@@ -6,6 +6,7 @@ import 'dart:developer' as developer;
 import 'package:launcher_utils/launcher_utils.dart';
 import 'package:launcher_utils_example/utils.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:provider/provider.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,60 +20,70 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  var launcherApi = LauncherUtils(
-    initColors: true,
-    pageCount: 8,
-    subscribeWallpaperChanges: true,
-  );
-
-  @override
-  void initState() {
-    super.initState();
-    launcherApi.updateScrollEvents();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    launcherApi.updateScrollEvents();
-  }
+  // Initialized in the changeNotifierProvider
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      theme: buildAmoledTheme(),
-      home: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: HomePage(launcherApi: launcherApi),
-        floatingActionButton: FloatButtons(launcherApi: launcherApi),
+    return ChangeNotifierProvider(
+      create: (context) {
+        LauncherUtils launcherApi;
+        launcherApi = LauncherUtils(
+          initColors: true,
+          pageCount: 8,
+          subscribeWallpaperChanges: true,
+          eventCallback: (event) {
+            print('Received an event: $event');
+          },
+        );
+        // Scroll the wallpaper to page 0 immediately
+        launcherApi.performScroll(page: 0);
+        return launcherApi;
+      },
+      child: MaterialApp(
+        theme: buildAmoledTheme(),
+        home: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: HomePage(),
+          floatingActionButton: FloatButtons(),
+        ),
       ),
     );
   }
 }
 
-class HomePage extends StatelessWidget {
-  const HomePage({
-    Key key,
-    @required this.launcherApi,
-  }) : super(key: key);
+class HomePage extends StatefulWidget {
+  const HomePage({Key key}) : super(key: key);
 
-  final LauncherUtils launcherApi;
+  @override
+  _HomePageState createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    Provider.of<LauncherUtils>(context).updateScrollEvents();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: <Widget>[
-        ColorWidgets(launcherApi: launcherApi),
+        ColorWidgets(),
         GestureDetector(
           child: SizedBox.expand(
             child: Container(
               child: PageView(
-                controller: launcherApi.scrollController,
-                children: _getPages(launcherApi.pageCount),
+                controller:
+                    Provider.of<LauncherUtils>(context).scrollController,
+                children:
+                    _getPages(Provider.of<LauncherUtils>(context).pageCount),
               ),
             ),
           ),
-          onTapDown: (ev) => launcherApi.sendWallpaperCommand(ev),
+          onTapDown: (ev) =>
+              Provider.of<LauncherUtils>(context).sendWallpaperCommand(ev),
         ),
       ],
     );
@@ -99,12 +110,7 @@ class HomePage extends StatelessWidget {
 }
 
 class FloatButtons extends StatelessWidget {
-  const FloatButtons({
-    Key key,
-    @required this.launcherApi,
-  }) : super(key: key);
-
-  final LauncherUtils launcherApi;
+  const FloatButtons({Key key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -112,21 +118,25 @@ class FloatButtons extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.end,
       children: <Widget>[
         FloatingActionButton(
-          onPressed: () => launcherApi.openLiveWallpaperSettings(),
+          onPressed: () =>
+              Provider.of<LauncherUtils>(context).openLiveWallpaperSettings(),
           child: Icon(Icons.settings_brightness),
         ),
         FloatingActionButton(
-          onPressed: () => LauncherUtils.getWallpaper(),
+          onPressed: () =>
+              Provider.of<LauncherUtils>(context).getWallpaperImage(),
           child: Icon(Icons.wallpaper),
         ),
         FloatingActionButton(
-          onPressed: () => launcherApi.openLiveWallpaperChooser(),
+          onPressed: () =>
+              Provider.of<LauncherUtils>(context).openLiveWallpaperChooser(),
           child: Icon(Icons.image),
         ),
         FloatingActionButton(
           onPressed: () => LauncherUtils.setWallpaper(useChooser: true),
           // onPressed: () {
-          //   LauncherUtils.setWallpaper(image: AssetImage("assets/test.jpg"));
+          //   LauncherUtils.setWallpaper(
+          //       image: AssetImage("assets/images/warrior.jpg"));
           // },
           child: Icon(Icons.photo_size_select_actual),
         ),
@@ -139,7 +149,7 @@ class FloatButtons extends StatelessWidget {
         ),
         FloatingActionButton(
           onPressed: () {
-            launcherApi.getWallpaperColors();
+            Provider.of<LauncherUtils>(context).getWallpaperColors();
           },
           child: Icon(Icons.palette),
         ),
@@ -151,33 +161,40 @@ class FloatButtons extends StatelessWidget {
 class ColorWidgets extends StatelessWidget {
   const ColorWidgets({
     Key key,
-    @required this.launcherApi,
   }) : super(key: key);
-
-  final LauncherUtils launcherApi;
 
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: <Widget>[
-          Container(
-            width: 100,
-            height: 100,
-            color: launcherApi.colors[0],
-          ),
-          Container(
-            width: 100,
-            height: 100,
-            color: launcherApi.colors[1],
-          ),
-          Container(
-            width: 100,
-            height: 100,
-            color: launcherApi.colors[2],
-          ),
-        ],
+      child: Consumer<LauncherUtils>(
+        builder: (context, value, _) {
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: <Widget>[
+              Container(
+                width: 100,
+                height: 100,
+                color: Provider.of<LauncherUtils>(context)
+                    .colors[0]
+                    .withOpacity(0.8),
+              ),
+              Container(
+                width: 100,
+                height: 100,
+                color: Provider.of<LauncherUtils>(context)
+                    .colors[1]
+                    .withOpacity(0.8),
+              ),
+              Container(
+                width: 100,
+                height: 100,
+                color: Provider.of<LauncherUtils>(context)
+                    .colors[2]
+                    .withOpacity(0.8),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

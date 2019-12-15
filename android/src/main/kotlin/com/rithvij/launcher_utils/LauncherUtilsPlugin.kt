@@ -9,10 +9,10 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.PixelFormat
-import android.graphics.Rect
+import android.graphics.Point
 import android.graphics.drawable.BitmapDrawable
 import android.os.Build
-import android.util.DisplayMetrics
+import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.annotation.RequiresApi
 import io.flutter.plugin.common.EventChannel
@@ -22,6 +22,7 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.PluginRegistry
 import io.flutter.view.FlutterView
 import java.io.ByteArrayOutputStream
+import java.io.File
 
 const val tag = "LauncherUtils"
 // This must be global so that all the receivers can access the event channel
@@ -66,6 +67,7 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
             "getWallpaper" -> {
+                // TODO: send some parameters from dart side like compression quality and desired dimensions
                 getWallpaper(result)
             }
             "getLockScreen" -> {
@@ -227,32 +229,87 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
     // Get the lock screen image
     // https://stackoverflow.com/a/53967444/8608146
     private fun getLockScreen(result: MethodChannel.Result) {
+        val bitmap = getWallpaper(lockScreen = true)
+        val stream = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+        result.success(stream.toByteArray())
+    }
+
+//    private fun getLockScreen(result: MethodChannel.Result) {
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+//            var drawable = wallpaperManager.getBuiltInDrawable(WallpaperManager.FLAG_LOCK)
+//            if (drawable == null) {
+//                drawable = wallpaperManager.getBuiltInDrawable(WallpaperManager.FLAG_SYSTEM)
+//            }
+//            val bitmap = (drawable as BitmapDrawable).bitmap
+//            val stream = ByteArrayOutputStream()
+//            bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+//            result.success(stream.toByteArray())
+//        } else {
+//            // TODO: Wallpaper same as lock screen for Android < N (check using an emulator)
+//            getWallpaper(result)
+//        }
+//    }
+
+
+    // This method gets the full width wallpaper on my device
+    // Whereas the `wallpaperManager.drawable` gets an image with some max width
+    // https://stackoverflow.com/a/53967444/8608146
+    @Suppress("SameParameterValue")
+    private fun getWallpaper(lockScreen: Boolean = false): Bitmap {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            val drawable = wallpaperManager.getBuiltInDrawable(WallpaperManager.FLAG_LOCK)
-            val bitmap = (drawable as BitmapDrawable).bitmap
-            val stream = ByteArrayOutputStream()
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
-            result.success(stream.toByteArray())
-        } else {
-            result.error("requiresApi", "Requires android N", null)
+            var pfd: ParcelFileDescriptor?
+            pfd = if (lockScreen) {
+                wallpaperManager.getWallpaperFile(WallpaperManager.FLAG_LOCK)
+            } else {
+                wallpaperManager.getWallpaperFile(WallpaperManager.FLAG_SYSTEM)
+            }
+            if (pfd == null || !lockScreen)
+                pfd = wallpaperManager.getWallpaperFile(WallpaperManager.FLAG_SYSTEM)
+            if (pfd != null) {
+                val result = BitmapFactory.decodeFileDescriptor(pfd.fileDescriptor)
+
+                // TODO: pfd is not closing for some reason
+                try {
+                    pfd.close()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                } finally {
+                    pfd.close()
+                }
+
+                return result
+            }
         }
+        return (wallpaperManager.drawable as BitmapDrawable).bitmap
     }
 
     // Get the current wallpaper
     // Always returns a byte array
     private fun getWallpaper(result: MethodChannel.Result) {
-//        if (wallpaperManager.wallpaperInfo != null) {
-//            result.success(wallpaperManager.wallpaperInfo.packageName)
-//        } else {
-        if (wallpaperManager.drawable is BitmapDrawable) {
-            print("it is")
-            print(wallpaperManager.drawable is BitmapDrawable)
+        // TODO: This is blocking UI thread
+
+//            AsyncTask.execute {
+//                val bitmap = (wallpaperManager.drawable as BitmapDrawable).bitmap
+//                val stream = ByteArrayOutputStream()
+//                bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+//                // TODO: Wait for this to be implemented
+//                // https://github.com/flutter/flutter/issues/13937
+//                result.success(stream.toByteArray())
+//            // TODO: OR look at this https://github.com/fluttercommunity/flutter_downloader/blob/master/android/src/main/java/vn/hunghd/flutterdownloader/DownloadWorker.java
+//            }
+//            https://developer.android.com/reference/android/app/WallpaperManager.html?hl=en#getDesiredMinimumWidth()
+        // Just logging the actual width, height set using suggestDesiredDimensions in setWallpaper
+        wallpaperManager.run {
+            Log.d(tag, "min width: $desiredMinimumWidth , height $desiredMinimumHeight")
         }
-        val bitmap = (wallpaperManager.drawable as BitmapDrawable).bitmap
+
+        val bitmap = getWallpaper(false)
         val stream = ByteArrayOutputStream()
         bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+        // TODO: Wait for this to be implemented
+        // https://github.com/flutter/flutter/issues/13937
         result.success(stream.toByteArray())
-//        }
     }
 
 //    startActivity(new Intent(WallpaperManager.WALLPAPER_PREVIEW_META_DATA));
@@ -281,7 +338,7 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
     }
 
     private fun setWallpaper(image: ByteArray, result: MethodChannel.Result) {
-        var bitmap = BitmapFactory.decodeByteArray(image, 0, image.size)
+        val bitmap = BitmapFactory.decodeByteArray(image, 0, image.size)
         if (bitmap == null) {
             result.error("failed", "Decoding the image failed", null)
             return
@@ -310,37 +367,52 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
 
         // clean up
         bitmap.recycle()
-        bitmap = null
     }
 
+
+    // TODO: create a setWallpaper Activity for my launcher
+    // Which supports crop, positioning, scroll etc.. like
     private fun setWallpaperFromBitmap(bitmap: Bitmap) {
-        val metrics = DisplayMetrics()
-        registrar.activity().windowManager.defaultDisplay.getMetrics(metrics)
-        Log.d(tag, "screen height: ${metrics.heightPixels}, width: ${metrics.widthPixels}")
+        val size = Point()
+        registrar.activity().windowManager.defaultDisplay.getSize(size)
+        Log.d(tag, "screen height: ${size.y}, width: ${size.x}")
         wallpaperManager.run {
-            val totWidth = bitmap.width * (metrics.heightPixels / metrics.widthPixels.toFloat())
-            val onePageWidth = ((metrics.widthPixels / metrics.heightPixels.toFloat()) * bitmap.height).toInt()
-            val numPages = (totWidth / onePageWidth).toInt()
+            val desiredWidth = (bitmap.width * (size.y / bitmap.height.toFloat()))
+            val desiredHeight = size.y
+            val onePageWidth = size.x
+            val numPages = (desiredWidth / onePageWidth).toInt()
             Log.d(tag, "Num pages is $numPages")
             Log.d(tag, "One page width is $onePageWidth")
-            Log.d(tag, "Total width is $totWidth")
+            Log.d(tag, "Total width $desiredWidth, height $desiredHeight")
             val x = onePageWidth * 3
             val y = 0
+
+            val rescaledBitmap = Bitmap.createScaledBitmap(bitmap, desiredWidth.toInt(), desiredHeight, true)
+            Log.d(tag, "Scaled bitmap dimens w: ${rescaledBitmap.width} h: ${rescaledBitmap.height}")
+//            setWallpaperOffsetSteps(1f/(8-1), 1f)
+            val filePath = applicationContext.getExternalFilesDir(null)!!.absolutePath
+            File(filePath, "map.png").writeBitmap(rescaledBitmap, Bitmap.CompressFormat.PNG, 100)
+            Log.d(tag, "saved to $filePath")
+
+            suggestDesiredDimensions(desiredWidth.toInt(), desiredHeight)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 setBitmap(
-                        bitmap,
-                        Rect(
-                                x,
-                                y,
-                                onePageWidth + x,
-                                bitmap.height + y
-                        ),
+                        rescaledBitmap,
+                        null,
+//                        Rect(
+//                                x,
+//                                y,
+//                                onePageWidth + x,
+//                                bitmap.height + y
+//                        ),
                         false,
                         WallpaperManager.FLAG_SYSTEM
                 )
             } else {
-                wallpaperManager.setBitmap(bitmap)
+                wallpaperManager.setBitmap(rescaledBitmap)
             }
+
+            rescaledBitmap.recycle()
         }
     }
 
@@ -524,3 +596,11 @@ class LauncherEventsReceiver : BroadcastReceiver() {
     }
 }
 
+// An extension method to save a bitmap
+// https://stackoverflow.com/a/52019768/8608146
+private fun File.writeBitmap(bitmap: Bitmap, format: Bitmap.CompressFormat, quality: Int) {
+    outputStream().use { out ->
+        bitmap.compress(format, quality, out)
+        out.flush()
+    }
+}

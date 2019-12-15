@@ -30,11 +30,9 @@ class LauncherUtils with ChangeNotifier {
     bool initColors: false,
     bool subscribeWallpaperChanges: false,
     int pageCount,
+    Function eventCallback,
   }) {
-    if (subscribeWallpaperChanges)
-      onEvent(callback: (event) {
-        print('Received an event: $event');
-      });
+    if (subscribeWallpaperChanges) onEvent(callback: eventCallback);
     if (initColors) getWallpaperColors();
     scrollController = (controller == null) ? PageController() : controller;
     if (pageCount != null) this.pageCount = pageCount;
@@ -104,11 +102,22 @@ class LauncherUtils with ChangeNotifier {
     }
   }
 
-  Future<void> getWallpaperImage(State widget) async {
+  Future<void> getWallpaperImage({State widget}) async {
     Uint8List bytes;
     try {
+      // TODO: Bug
+      // Before setting the wallpaper using the platform channel
+      // The minDesiredWidth, minDesiredHeight are being set
+      // After the wallpaper changes to live wallpaper the getWallpaper method still sees the same min width and height thus returning the wallpaper as with the dimensions of the previously set wallpaper.
+      // This might be a problem as if the wallpaper is changed by any other method than the setWallpaper of this plugin,
+      // the getWallpaper would return a wallpaper with wrong dimensions.
       bytes = await LauncherUtils.getWallpaper();
-      print(bytes.runtimeType);
+      var image = MemoryImage(bytes);
+      image
+          .resolve(ImageConfiguration())
+          .addListener(ImageStreamListener((img, a) async {
+        print("${img.image.width}, ${img.image.height}");
+      }));
     } on PermissionDeniedException catch (e) {
       // open settings or show snackbar
       print(e);
@@ -116,7 +125,9 @@ class LauncherUtils with ChangeNotifier {
       print(e);
     }
 
-    if (!widget.mounted) return;
+    // if (!widget.mounted) {
+    //   return;
+    // }
   }
 
   /// Returns the wallpaper as a byte array.
@@ -170,16 +181,20 @@ class LauncherUtils with ChangeNotifier {
 
   void updateScrollEvents() {
     if (scrollController.hasListeners) {
-      scrollController.removeListener(scrollListener);
+      scrollController.removeListener(performScroll);
     }
-    if (scroll) scrollController.addListener(scrollListener);
+    if (scroll) scrollController.addListener(performScroll);
   }
 
-  void scrollListener() {
+  // Page argument is for the first time
+  void performScroll({double page}) {
     // print("${scrollController.page} $pageCount");
     // TODO: Android change WallpaperOffsetSteps
     // This doesn't seem right
-    setWallpaperOffsets(scrollController.page, pageCount);
+    if (page != null) {
+      setWallpaperOffsets(page, pageCount);
+    } else
+      setWallpaperOffsets(scrollController.page, pageCount);
   }
 
   void enableScroll() => scroll = true;
