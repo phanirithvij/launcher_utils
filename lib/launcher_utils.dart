@@ -38,11 +38,6 @@ class LauncherUtils with ChangeNotifier {
     if (pageCount != null) this.pageCount = pageCount;
   }
 
-  static Future<String> get platformVersion async {
-    final String version = await _channel.invokeMethod('getPlatformVersion');
-    return version;
-  }
-
   /// On event change execute the [callback].
   /// It recieves an argument [event].
   /// TODO: Give the function a proper type so that it accepts one argument.
@@ -61,7 +56,7 @@ class LauncherUtils with ChangeNotifier {
   /// Returns whether the wallpaper is supported.
   /// Returns null if API is less than Android M.
   /// This is a wrapper around android's `WallpaperManager.isWallpaperSupported`
-  static Future<bool> get isWallpaperSupported async {
+  Future<bool> get isWallpaperSupported async {
     try {
       final bool supported =
           await _channel.invokeMethod('isWallpaperSupported');
@@ -74,7 +69,7 @@ class LauncherUtils with ChangeNotifier {
 
   /// Sets the given wallpaper
   /// If no argument is provided, opens the wallpaper chooser
-  static Future<void> setWallpaper({
+  Future<void> setWallpaper({
     ImageProvider image,
     bool useChooser: false,
   }) async {
@@ -111,7 +106,7 @@ class LauncherUtils with ChangeNotifier {
       // After the wallpaper changes to live wallpaper the getWallpaper method still sees the same min width and height thus returning the wallpaper as with the dimensions of the previously set wallpaper.
       // This might be a problem as if the wallpaper is changed by any other method than the setWallpaper of this plugin,
       // the getWallpaper would return a wallpaper with wrong dimensions.
-      bytes = await LauncherUtils.getWallpaper();
+      bytes = await getWallpaper();
       var image = MemoryImage(bytes);
       image
           .resolve(ImageConfiguration())
@@ -132,7 +127,7 @@ class LauncherUtils with ChangeNotifier {
 
   /// Returns the wallpaper as a byte array.
   /// Use [Image.memory] to display it
-  static Future getWallpaper() async {
+  Future getWallpaper() async {
     // TODO: Check if permission for external storage is needed
     // For Android < M it's not needed
 
@@ -173,8 +168,8 @@ class LauncherUtils with ChangeNotifier {
       notifyListeners();
       return colors;
     } on PlatformException catch (e) {
-      developer.log("Failed to get Wallpaper colors");
-      print(e);
+      developer.log("Failed to get Wallpaper colors", error: e);
+      notifyListeners();
       return [];
     }
   }

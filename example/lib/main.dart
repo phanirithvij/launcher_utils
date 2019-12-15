@@ -133,7 +133,8 @@ class FloatButtons extends StatelessWidget {
           child: Icon(Icons.image),
         ),
         FloatingActionButton(
-          onPressed: () => LauncherUtils.setWallpaper(useChooser: true),
+          onPressed: () => Provider.of<LauncherUtils>(context)
+              .setWallpaper(useChooser: true),
           // onPressed: () {
           //   LauncherUtils.setWallpaper(
           //       image: AssetImage("assets/images/warrior.jpg"));
@@ -176,21 +177,21 @@ class ColorWidgets extends StatelessWidget {
                 height: 100,
                 color: Provider.of<LauncherUtils>(context)
                     .colors[0]
-                    .withOpacity(0.8),
+                    ?.withOpacity(0.8),
               ),
               Container(
                 width: 100,
                 height: 100,
                 color: Provider.of<LauncherUtils>(context)
                     .colors[1]
-                    .withOpacity(0.8),
+                    ?.withOpacity(0.8),
               ),
               Container(
                 width: 100,
                 height: 100,
                 color: Provider.of<LauncherUtils>(context)
                     .colors[2]
-                    .withOpacity(0.8),
+                    ?.withOpacity(0.8),
               ),
             ],
           );

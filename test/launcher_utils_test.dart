@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:launcher_utils/launcher_utils.dart';
 
 void main() {
-  const MethodChannel channel = MethodChannel('launcher_utils');
+  const MethodChannel channel = MethodChannel('launcher_utils/api');
 
   setUp(() {
     channel.setMockMethodCallHandler((MethodCall methodCall) async {
@@ -16,6 +16,6 @@ void main() {
   });
 
   test('getWallpaperSupported', () async {
-    expect(await LauncherUtils.isWallpaperSupported, true);
+    expect(await LauncherUtils().isWallpaperSupported, true);
   });
 }
