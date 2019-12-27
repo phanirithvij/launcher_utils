@@ -7,6 +7,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:launcher_utils/permission_helper.dart';
 
 import 'package:permission_handler/permission_handler.dart';
 import 'package:launcher_utils/exceptions.dart';
@@ -17,6 +18,7 @@ class LauncherUtils with ChangeNotifier {
   bool scroll = true;
   int pageCount = 7;
   List<Color> colors = [Colors.black, Colors.black, Colors.black];
+  Uint8List wallpaperImage;
 
   static const _channel = const MethodChannel('launcher_utils/api');
   static const _eventChannel = const EventChannel('launcher_utils/events');
@@ -83,11 +85,10 @@ class LauncherUtils with ChangeNotifier {
           var data = await img.image.toByteData(format: ui.ImageByteFormat.png);
           // https://stackoverflow.com/a/50121777/8608146
           // TODO: On android side `wallpaperManager.setBitmap` is not perfect
-          var view = data.buffer.asUint8List();
           print("height: ${img.image.height}, width: ${img.image.width}");
           var response = await _channel.invokeMethod(
             'setWallpaper',
-            {"image": view},
+            {"image": data.buffer.asUint8List()},
           );
 
           developer.log(response.toString());
@@ -97,8 +98,7 @@ class LauncherUtils with ChangeNotifier {
     }
   }
 
-  Future<void> getWallpaperImage({State widget}) async {
-    Uint8List bytes;
+  Future<void> getWallpaperImage({BuildContext context}) async {
     try {
       // TODO: Bug
       // Before setting the wallpaper using the platform channel
@@ -106,8 +106,9 @@ class LauncherUtils with ChangeNotifier {
       // After the wallpaper changes to live wallpaper the getWallpaper method still sees the same min width and height thus returning the wallpaper as with the dimensions of the previously set wallpaper.
       // This might be a problem as if the wallpaper is changed by any other method than the setWallpaper of this plugin,
       // the getWallpaper would return a wallpaper with wrong dimensions.
-      bytes = await getWallpaper();
-      var image = MemoryImage(bytes);
+      wallpaperImage = await getWallpaper();
+      notifyListeners();
+      var image = MemoryImage(wallpaperImage);
       image
           .resolve(ImageConfiguration())
           .addListener(ImageStreamListener((img, a) async {
@@ -116,13 +117,37 @@ class LauncherUtils with ChangeNotifier {
     } on PermissionDeniedException catch (e) {
       // open settings or show snackbar
       print(e);
+      if (context != null) {
+        Scaffold.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Permission denied"),
+            action: SnackBarAction(
+              label: "Grant Permission",
+              onPressed: () async {
+                // if rejected show snackbar with an action that opens the settings
+                final status = await _requestPermissions();
+                if (status == PermissionStatusX.doNotAskAgain) {
+                  bool isOpened = await PermissionHandler().openAppSettings();
+                  print("settings page opened $isOpened");
+                  if (!isOpened) {
+                    // TODO: Show user that they need to open the settings manually
+                  }
+                }
+              },
+            ),
+          ),
+        );
+      }
     } on Exception catch (e) {
       print(e);
+      if (context != null) {
+        Scaffold.of(context).showSnackBar(
+          SnackBar(
+            content: Text("$e"),
+          ),
+        );
+      }
     }
-
-    // if (!widget.mounted) {
-    //   return;
-    // }
   }
 
   /// Returns the wallpaper as a byte array.
@@ -133,17 +158,9 @@ class LauncherUtils with ChangeNotifier {
 
     // Checking by default for now
     // Check if permission for external storage is granted
-    PermissionStatus permission = await PermissionHandler()
-        .checkPermissionStatus(PermissionGroup.storage);
-    if (permission != PermissionStatus.granted) {
-      // If not granted request
-      Map<PermissionGroup, PermissionStatus> permissions =
-          await PermissionHandler()
-              .requestPermissions([PermissionGroup.storage]);
-      if (permissions[PermissionGroup.storage] != PermissionStatus.granted) {
-        // if not granted request
-        throw PermissionDeniedException("Permission denied by user");
-      }
+    final status = await _requestPermissions();
+    if (status != PermissionStatusX.granted) {
+      throw PermissionDeniedException("Permission denied by user");
     }
     var image = await _channel.invokeMethod('getWallpaper');
     print(image.runtimeType);
@@ -153,9 +170,10 @@ class LauncherUtils with ChangeNotifier {
   /// Returns the wallpaper colors
   /// Wrapper around android's `WallpaperManager.getWallpaperColors`
   /// Requires min Api 27
-  Future<List<Color>> getWallpaperColors() async {
+  Future<void> getWallpaperColors() async {
     try {
       List data = await _channel.invokeMethod("getColors");
+      var prevColors = List<Color>.from(colors);
       colors.clear();
       data.forEach((c) {
         Color col;
@@ -164,13 +182,26 @@ class LauncherUtils with ChangeNotifier {
         }
         colors.add(col);
       });
+      // if prev colors not same as colors
+      // then notify listeners
+      var same = true;
+      if (prevColors.length != colors.length) same = false;
+      if (same) {
+        for (int i = 0; i < prevColors.length; i++) {
+          if (prevColors[i] != colors[i]) {
+            same = false;
+            break;
+          }
+        }
+      }
       developer.log("Colors $colors");
-      notifyListeners();
-      return colors;
+      if (!same) {
+        notifyListeners();
+        prevColors.clear();
+      }
     } on PlatformException catch (e) {
       developer.log("Failed to get Wallpaper colors", error: e);
       notifyListeners();
-      return [];
     }
   }
 
@@ -192,17 +223,29 @@ class LauncherUtils with ChangeNotifier {
       setWallpaperOffsets(scrollController.page, pageCount);
   }
 
+  /// Call this method to enable the wallpaper scroll
   void enableScroll() => scroll = true;
+
+  /// Call this method to disable the wallpaper scroll
   void disableScroll() => scroll = false;
+
+  /// Call this method to toggle the wallpaper scroll
   void toggleScroll() => scroll = !scroll;
 
   /// Sends a command to live wallpapers so they could receive tap events
-  Future<void> sendWallpaperCommand(TapDownDetails ev) async {
+  /// Must provide a `PointerDownEvent` or a `TapDownDetails`
+  /// which come from `Listener.onPointerDown` and `GestureDetector.onTapDown` respectively
+  Future<void> sendWallpaperCommand(
+      {PointerDownEvent event, TapDownDetails details}) async {
+    print('send data');
+    Map<String, double> pos = {'x': 0, 'y': 0};
+    assert(event != null || details != null);
+    pos['x'] =
+        (details != null) ? details.globalPosition.dx : event.position.dx;
+    pos['y'] =
+        (details != null) ? details.globalPosition.dy : event.position.dy;
     try {
-      await _channel.invokeMethod(
-        "wallpaperCommand",
-        [ev.globalPosition.dx, ev.globalPosition.dy],
-      );
+      await _channel.invokeMethod("wallpaperCommand", [pos['x'], pos['y']]);
     } on PlatformException catch (e) {
       developer.log("Failed to send a Wallpaper command", error: e);
     }
@@ -246,5 +289,11 @@ class LauncherUtils with ChangeNotifier {
     } on PlatformException catch (e) {
       developer.log("Failed to open live wallpaper settings", error: e);
     }
+  }
+
+  Future<PermissionStatusX> _requestPermissions() async {
+    final status = PermissionHelper.requestPermissions(
+        TargetPlatform.android, PermissionGroup.storage);
+    return status;
   }
 }

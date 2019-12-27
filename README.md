@@ -2,6 +2,9 @@
 
 A flutter plugin that exposes some android APIs to help build home screen replacement apps.
 
+> A Note to self:
+> Also start an Icon Pack explorer plugin
+
 **LICENSE:** [BSD 3-Clause](LICENSE)
 
 **Status:** WIP

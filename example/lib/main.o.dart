@@ -1,7 +1,10 @@
-import 'dart:developer' as developer;
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+import 'dart:developer' as developer;
+
 import 'package:launcher_utils/launcher_utils.dart';
 import 'package:launcher_utils_example/utils.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -71,37 +74,39 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Stack(
       children: <Widget>[
-        Comment(
-            /*
-              // TODO: A GestureDetector which sends the wallpaper command should be in the last layer of the stack
-              // But won't doesn't work
-              // https://github.com/flutter/flutter/issues/47119
-              // A workaround for now is to make each page a stack
-              // And have a background gesture detector for each page to send the wallpaper command
-              Listener(
-                behavior: HitTestBehavior.translucent,
-                onPointerDown: (ev) => Provider.of<LauncherUtils>(context)
-                    .sendWallpaperCommand(event: ev),
-              ),
-            */
-            ),
-        Center(
+        // TODO: GestureDetector should be in the last layer of the stack
+        // But gestures doesn't work
+        GestureDetector(
           child: Container(
-            child: (Provider.of<LauncherUtils>(context).wallpaperImage != null)
-                ? Image.memory(
-                    Provider.of<LauncherUtils>(context).wallpaperImage,
-                    height: 200,
-                  )
-                : Container(
-                    height: 200,
-                    color: Colors.pink[100].withOpacity(0.4),
-                  ),
+            color: Colors.blue[100].withOpacity(0.4),
+          ),
+          onTapDown: (ev) => Provider.of<LauncherUtils>(context)
+              .sendWallpaperCommand(details: ev),
+        ),
+        IgnorePointer(
+          child: Container(
+            // color: Colors.blue[100].withOpacity(0.4),
+            child: Center(
+              child:
+                  (Provider.of<LauncherUtils>(context).wallpaperImage != null)
+                      ? Image.memory(
+                          Provider.of<LauncherUtils>(context).wallpaperImage,
+                          height: 200,
+                        )
+                      : Container(
+                          height: 200,
+                          color: Colors.pink[100].withOpacity(0.4),
+                        ),
+            ),
           ),
         ),
-        // IgnorePointer(
-        PageView(
-          controller: Provider.of<LauncherUtils>(context).scrollController,
-          children: _getPages(Provider.of<LauncherUtils>(context).pageCount),
+        GestureDetector(
+          onTap: () => print("page view"),
+          behavior: HitTestBehavior.translucent,
+          child: PageView(
+            controller: Provider.of<LauncherUtils>(context).scrollController,
+            children: _getPages(Provider.of<LauncherUtils>(context).pageCount),
+          ),
         ),
         ColorWidgets(),
       ],
@@ -112,31 +117,23 @@ class _HomePageState extends State<HomePage> {
     var pages = <Widget>[];
     for (int i = 0; i < pageCount; i++) {
       pages.add(
-        Stack(
-          children: <Widget>[
-            Listener(
-              onPointerDown: (ev) {
-                Provider.of<LauncherUtils>(context)
-                    .sendWallpaperCommand(event: ev);
-              },
-              child: Container(color: Colors.transparent),
-            ),
-            Listener(
-              behavior: HitTestBehavior.translucent,
-              child: IgnorePointer(
-                child: Center(
-                  child: Container(
-                    child: Text(
-                      "Page ${i + 1}",
-                      style: TextStyle(
-                        fontSize: 20,
-                      ),
-                    ),
-                  ),
-                ),
+        Container(
+          width: 50,
+          height: 60,
+          color: Color.fromRGBO(
+            Random().nextInt(255),
+            Random().nextInt(255),
+            Random().nextInt(255),
+            .5,
+          ),
+          child: Center(
+            child: Text(
+              "Page ${i + 1}",
+              style: TextStyle(
+                fontSize: 20,
               ),
             ),
-          ],
+          ),
         ),
       );
     }
@@ -168,12 +165,12 @@ class FloatButtons extends StatelessWidget {
           child: Icon(Icons.image),
         ),
         FloatingActionButton(
-          // onPressed: () => Provider.of<LauncherUtils>(context)
-          //     .setWallpaper(useChooser: true),
-          onPressed: () {
-            Provider.of<LauncherUtils>(context)
-                .setWallpaper(image: AssetImage("assets/images/warrior.jpg"));
-          },
+          onPressed: () => Provider.of<LauncherUtils>(context)
+              .setWallpaper(useChooser: true),
+          // onPressed: () {
+          //   LauncherUtils.setWallpaper(
+          //       image: AssetImage("assets/images/warrior.jpg"));
+          // },
           child: Icon(Icons.photo_size_select_actual),
         ),
         FloatingActionButton(
@@ -248,13 +245,4 @@ class ColorWidgets extends StatelessWidget {
       },
     );
   }
-}
-
-class Comment extends StatelessWidget {
-  // TODO: Make a feature request on vscode to allow multi-line comments to be collapsed from the left side bar
-  /// Just an empty container that can be minimized in vs code
-  Comment({Key key}) : super(key: key);
-
-  @override
-  build(context) => Container(width: 0, height: 0);
 }

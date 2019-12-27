@@ -23,6 +23,7 @@ import io.flutter.plugin.common.PluginRegistry
 import io.flutter.view.FlutterView
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.OutputStream
 
 const val tag = "LauncherUtils"
 // This must be global so that all the receivers can access the event channel
@@ -231,7 +232,7 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
     private fun getLockScreen(result: MethodChannel.Result) {
         val bitmap = getWallpaper(lockScreen = true)
         val stream = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream as OutputStream)
         result.success(stream.toByteArray())
     }
 
@@ -463,7 +464,7 @@ class LauncherUtilsPlugin(private var registrar: PluginRegistry.Registrar) : Met
     }
 
     private fun sendWallpaperEvents(position: ArrayList<Float>) {
-        Log.d(tag, "Sending a Wallpaper command")
+        // Log.d(tag, "Sending a Wallpaper command")
 
         if (wallpaperManager.wallpaperInfo != null) {
             // Only send a command if it is a live wallpaper
